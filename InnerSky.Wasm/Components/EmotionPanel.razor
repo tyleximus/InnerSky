@@ -127,19 +127,7 @@
     private bool IsExistingMomentModalOpen;
     private string NewMomentTitle = string.Empty;
     private string NewMomentComment = string.Empty;
-    public DateTime NewMomentDateTimeLocal { get; set; } = DateTime.Now;
-
-    // private string NewMomentDateTimeLocal
-    // {
-    //     get => NewMomentDateTime.ToString("yyyy-MM-ddTHH:mm");
-    //     set
-    //     {
-    //         if (DateTime.TryParse(value, out var parsed))
-    //         {
-    //             NewMomentDateTime = parsed;
-    //         }
-    //     }
-    // }
+    public DateTime NewMomentDateTimeLocal { get; set; } = CurrentLocalMinute();
 
     private bool CanAddBlend =>
         !string.IsNullOrWhiteSpace(State.Name)
@@ -164,7 +152,7 @@
             return;
         }
 
-        NewMomentDateTimeLocal = DateTime.Now;
+        NewMomentDateTimeLocal = CurrentLocalMinute();
         IsCreateMomentModalOpen = true;
     }
 
@@ -185,7 +173,7 @@
     private async Task SubmitNewMoment()
     {
         var profile = State.ToProfile();
-        var created = await ApiClient.CreateAsync(
+        await ApiClient.CreateAsync(
             profile,
             null,
             new EmotionMomentApiRequest(NewMomentTitle, NewMomentComment, NewMomentDateTimeLocal.ToUniversalTime()));
@@ -199,7 +187,7 @@
     private async Task AddToExistingMoment(int momentId)
     {
         var profile = State.ToProfile();
-        var created = await ApiClient.CreateAsync(profile, momentId, null);
+        await ApiClient.CreateAsync(profile, momentId, null);
 
         await RefreshMoments();
 
@@ -209,10 +197,16 @@
 
     private async Task RefreshMoments()
     {
-        var moments = await ApiClient.ListMomentsAsync();
-        ExistingMoments = moments
+        var moments = await ApiClient.ListMomentsAsync(new MomentsQuery(null, null, null, null, 1, 25));
+        ExistingMoments = moments.Items
             .Select(m => new MomentSummary(m.Id, m.Title, m.MomentUtc.ToLocalTime(), m.Blends.Select(b => b.Name).ToList()))
             .ToList();
+    }
+
+    private static DateTime CurrentLocalMinute()
+    {
+        var now = DateTime.Now;
+        return new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0);
     }
 
     public void Dispose() => State.OnChange -= OnStateChanged;
