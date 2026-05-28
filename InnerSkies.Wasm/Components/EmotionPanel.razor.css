@@ -22,3 +22,46 @@
 ::deep .emotion-row:last-child {
     border-bottom: 0 !important;
 }
+
+.moment-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(2px);
+    z-index: 1040;
+}
+
+.moment-modal-wrap {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+}
+
+.moment-modal {
+    width: min(100%, 640px);
+    border-radius: 16px;
+}
+
+.moment-list-item {
+    width: 100%;
+    border: 1px solid #dbe5f0;
+    border-radius: 12px;
+    background: #fff;
+    text-align: left;
+    padding: 0.9rem 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+    .moment-list-item:hover {
+        border-color: #8bb2ff;
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.16);
+        transform: translateY(-1px);
+    }
+
+    .moment-list-item:focus-visible {
+        outline: 3px solid #7aa2ff;
+        outline-offset: 2px;
+    }

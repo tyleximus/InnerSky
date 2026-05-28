@@ -1,5 +1,6 @@
 @implements IDisposable
 @inject EmotionStateService State
+@inject IJSRuntime JS
 
 @using InnerSkies.Wasm.Data
 @using InnerSkies.Wasm.Models
@@ -8,17 +9,8 @@
 <section class="card border-0 shadow-sm emotion-panel mx-auto">
     <header class="card-header emotion-panel__header border-0">
         <div class="row align-items-end g-3">
-            <div class="col-12 col-sm">
-                <h2 class="h5 fw-semibold mb-1">Emotion</h2>
-                <p class="text-secondary small mb-0">
-                    Name this emotion, then enable and tune the base emotions that compose it.
-                </p>
-            </div>
-            <div class="col-12 col-sm-auto emotion-panel__name">
-                <label for="emotionName"
-                       class="form-label small fw-semibold text-uppercase text-secondary mb-1">
-                    Name
-                </label>
+            <div class="col">
+                <h2 class="h5 fw-semibold mb-1">Emotion Blend</h2>
                 <input id="emotionName" type="text" class="form-control form-control-lg"
                        placeholder="Name this emotion…"
                        value="@State.Name" @oninput="OnNameInput" />
@@ -39,14 +31,170 @@
                            LevelChanged="@(level => State.SetLevel(c.Id, level))" />
         }
     </div>
+
+    <footer class="card-footer bg-white border-0 pt-0 pb-3">
+        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-end">
+            <button class="btn btn-outline-primary btn-lg"
+                    type="button"
+                    @onclick="OpenExistingMomentModal"
+                    disabled="@(!CanAddBlend)">
+                Add to existing moment
+            </button>
+            <button class="btn btn-primary btn-lg"
+                    type="button"
+                    @onclick="OpenCreateMomentModal"
+                    disabled="@(!CanAddBlend)">
+                Create new moment
+            </button>
+        </div>
+        @if (!CanAddBlend)
+        {
+            <p class="small text-secondary mb-0 mt-2">
+                Name the emotion and select at least one enabled slider to add this blend to a moment.
+            </p>
+        }
+    </footer>
 </section>
 
+@if (IsCreateMomentModalOpen)
+{
+    <div class="moment-modal-backdrop" @onclick="CloseCreateMomentModal"></div>
+    <div class="moment-modal-wrap" role="dialog" aria-modal="true" aria-labelledby="createMomentTitle">
+        <section class="moment-modal card shadow-lg border-0" @onclick:stopPropagation>
+            <header class="card-header bg-white border-0 pb-0 d-flex justify-content-between align-items-start">
+                <div>
+                    <h3 id="createMomentTitle" class="h5 fw-semibold mb-1">Create new moment</h3>
+                    <p class="small text-secondary mb-0">Create a snapshot in time and include this emotion blend.</p>
+                </div>
+                <button class="btn-close" type="button" @onclick="CloseCreateMomentModal" aria-label="Close"></button>
+            </header>
+            <div class="card-body pt-3">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="momentTitle">Moment title <span class="text-secondary fw-normal">(optional)</span></label>
+                    <input id="momentTitle" class="form-control" type="text" placeholder="Morning check-in" @bind="NewMomentTitle" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="momentComment">Comment <span class="text-secondary fw-normal">(optional)</span></label>
+                    <textarea id="momentComment" class="form-control" rows="3" placeholder="Write anything helpful about this moment..." @bind="NewMomentComment"></textarea>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold" for="momentDateTime">Date &amp; time <span class="text-danger">*</span></label>
+                    <input id="momentDateTime" class="form-control" type="datetime-local" @bind="NewMomentDateTimeLocal" />
+                </div>
+            </div>
+            <footer class="card-footer bg-white border-0 pt-0 d-flex justify-content-end">
+                <button class="btn btn-primary" type="button" @onclick="SubmitNewMoment">Add blend to moment</button>
+            </footer>
+        </section>
+    </div>
+}
+
+@if (IsExistingMomentModalOpen)
+{
+    <div class="moment-modal-backdrop" @onclick="CloseExistingMomentModal"></div>
+    <div class="moment-modal-wrap" role="dialog" aria-modal="true" aria-labelledby="existingMomentTitle">
+        <section class="moment-modal card shadow-lg border-0" @onclick:stopPropagation>
+            <header class="card-header bg-white border-0 pb-0 d-flex justify-content-between align-items-start">
+                <div>
+                    <h3 id="existingMomentTitle" class="h5 fw-semibold mb-1">Add to existing moment</h3>
+                    <p class="small text-secondary mb-0">Choose one of your moments to add this blend.</p>
+                </div>
+                <button class="btn-close" type="button" @onclick="CloseExistingMomentModal" aria-label="Close"></button>
+            </header>
+            <div class="card-body pt-3">
+                <ul class="list-unstyled d-flex flex-column gap-2 mb-0">
+                    @foreach (var moment in ExistingMoments)
+                    {
+                        <li>
+                            <button type="button" class="moment-list-item" @onclick="() => AddToExistingMoment(moment.Id)">
+                                <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                                    <strong>@moment.Title</strong>
+                                    <span class="small text-secondary">@moment.DateTime.ToString("MMM d, yyyy h:mm tt")</span>
+                                </div>
+                                <div class="small text-secondary">@string.Join(", ", moment.BlendNames)</div>
+                            </button>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </section>
+    </div>
+}
+
 @code {
+    private bool IsCreateMomentModalOpen;
+    private bool IsExistingMomentModalOpen;
+    private string NewMomentTitle = string.Empty;
+    private string NewMomentComment = string.Empty;
+    public DateTime NewMomentDateTimeLocal { get; set; } = DateTime.Now;
+
+    // private string NewMomentDateTimeLocal
+    // {
+    //     get => NewMomentDateTime.ToString("yyyy-MM-ddTHH:mm");
+    //     set
+    //     {
+    //         if (DateTime.TryParse(value, out var parsed))
+    //         {
+    //             NewMomentDateTime = parsed;
+    //         }
+    //     }
+    // }
+
+    private bool CanAddBlend =>
+        !string.IsNullOrWhiteSpace(State.Name)
+        && State.Components.Any(c => c.Enabled);
+
+    private List<MomentSummary> ExistingMoments { get; } =
+    [
+        new(1, "Morning reflection", DateTime.Now.AddHours(-4), ["Calm + Trust", "Hopeful Shift"]),
+        new(2, "Team sync prep", DateTime.Now.AddDays(-1).AddHours(-2), ["Focused Resolve"]),
+        new(3, "Evening unwind", DateTime.Now.AddDays(-2).AddHours(-5), ["Gratitude Blend", "Tired + Peaceful"])
+    ];
+
     protected override void OnInitialized() => State.OnChange += OnStateChanged;
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);
 
     private void OnNameInput(ChangeEventArgs e) => State.Rename(e.Value?.ToString() ?? string.Empty);
 
+    private void OpenCreateMomentModal()
+    {
+        if (!CanAddBlend)
+        {
+            return;
+        }
+
+        NewMomentDateTimeLocal = DateTime.Now;
+        IsCreateMomentModalOpen = true;
+    }
+
+    private void CloseCreateMomentModal() => IsCreateMomentModalOpen = false;
+
+    private void OpenExistingMomentModal()
+    {
+        if (!CanAddBlend)
+        {
+            return;
+        }
+
+        IsExistingMomentModalOpen = true;
+    }
+
+    private void CloseExistingMomentModal() => IsExistingMomentModalOpen = false;
+
+    private async Task SubmitNewMoment()
+    {
+        IsCreateMomentModalOpen = false;
+        await JS.InvokeVoidAsync("alert", "added");
+    }
+
+    private async Task AddToExistingMoment(int _)
+    {
+        IsExistingMomentModalOpen = false;
+        await JS.InvokeVoidAsync("alert", "added");
+    }
+
     public void Dispose() => State.OnChange -= OnStateChanged;
+
+    private sealed record MomentSummary(int Id, string Title, DateTime DateTime, IReadOnlyList<string> BlendNames);
 }
