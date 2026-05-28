@@ -1,4 +1,5 @@
 using InnerSky.WebApi;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,14 +51,24 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+/// Ensure the app can read the X-Forwarded-Proto header to determine if the request is secure (HTTPS) when behind a reverse proxy or load balancer that terminates SSL.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedProto
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+app.UseRouting();
+
 app.UseCors();
+
 app.UseAuthorization();
+
 app.MapControllers();
+
 app.Run();
