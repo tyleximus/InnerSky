@@ -6,16 +6,33 @@ public sealed class InnerSkyDbContext(DbContextOptions<InnerSkyDbContext> option
 {
     public DbSet<EmotionProfileEntity> EmotionProfiles => Set<EmotionProfileEntity>();
     public DbSet<EmotionProfileComponentEntity> EmotionProfileComponents => Set<EmotionProfileComponentEntity>();
+    public DbSet<EmotionMomentEntity> EmotionMoments => Set<EmotionMomentEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<EmotionMomentEntity>(entity =>
+        {
+            entity.ToTable("EmotionMoments");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).UseIdentityColumn();
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Comment).HasMaxLength(2000);
+            entity.Property(x => x.MomentUtc).HasColumnType("datetime2(0)").IsRequired();
+            entity.Property(x => x.CreatedUtc).HasColumnType("datetime2(0)").IsRequired();
+            entity.HasMany(x => x.Profiles)
+                .WithOne(x => x.Moment)
+                .HasForeignKey(x => x.MomentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<EmotionProfileEntity>(entity =>
         {
             entity.ToTable("EmotionProfiles");
             entity.HasKey(x => x.Id);
-            entity.Property(x => x.Id).ValueGeneratedNever();
+            entity.Property(x => x.Id).UseIdentityColumn();
             entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
             entity.Property(x => x.CreatedUtc).HasColumnType("datetime2(0)").IsRequired();
+            entity.Property(x => x.MomentId).IsRequired();
             entity.HasMany(x => x.Components)
                 .WithOne(x => x.Profile)
                 .HasForeignKey(x => x.ProfileId)
