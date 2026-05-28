@@ -59,7 +59,7 @@ public sealed class EmotionProfilesController(InnerSkyDbContext db) : Controller
             
             Name = request.Name.Trim(),
             CreatedUtc = DateTime.UtcNow,
-            MomentId = moment.Id,
+            Moment = moment,
             Components = request.Components
                 .Select(c => new EmotionProfileComponentEntity
                 {
