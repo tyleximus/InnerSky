@@ -12,6 +12,7 @@ GO
 
 IF OBJECT_ID(N'dbo.EmotionProfileComponents', N'U') IS NOT NULL DROP TABLE dbo.EmotionProfileComponents;
 IF OBJECT_ID(N'dbo.EmotionProfiles', N'U') IS NOT NULL DROP TABLE dbo.EmotionProfiles;
+IF OBJECT_ID(N'dbo.EmotionMoments', N'U') IS NOT NULL DROP TABLE dbo.EmotionMoments;
 IF OBJECT_ID(N'dbo.Dyads', N'U') IS NOT NULL DROP TABLE dbo.Dyads;
 IF OBJECT_ID(N'dbo.EmotionIntensityNames', N'U') IS NOT NULL DROP TABLE dbo.EmotionIntensityNames;
 IF OBJECT_ID(N'dbo.BaseEmotions', N'U') IS NOT NULL DROP TABLE dbo.BaseEmotions;
@@ -44,23 +45,37 @@ CREATE TABLE dbo.Dyads
     CONSTRAINT FK_Dyads_EmotionB FOREIGN KEY (EmotionBId) REFERENCES dbo.BaseEmotions (EmotionId)
 );
 
+CREATE TABLE dbo.EmotionMoments
+(
+    Id              INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_EmotionMoments PRIMARY KEY,
+    Title           NVARCHAR(200) NOT NULL,
+    Comment         NVARCHAR(2000) NULL,
+    MomentUtc       DATETIME2(0) NOT NULL,
+    CreatedUtc      DATETIME2(0) NOT NULL CONSTRAINT DF_EmotionMoments_CreatedUtc DEFAULT (SYSUTCDATETIME())
+);
+
 CREATE TABLE dbo.EmotionProfiles
 (
-    Id              UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_EmotionProfiles PRIMARY KEY,
+    Id              INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_EmotionProfiles PRIMARY KEY,
     Name            NVARCHAR(200) NOT NULL,
+    MomentId        INT NOT NULL,
     CreatedUtc      DATETIME2(0) NOT NULL CONSTRAINT DF_EmotionProfiles_CreatedUtc DEFAULT (SYSUTCDATETIME())
 );
 
 CREATE TABLE dbo.EmotionProfileComponents
 (
     Id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_EmotionProfileComponents PRIMARY KEY,
-    ProfileId       UNIQUEIDENTIFIER NOT NULL,
+    ProfileId       INT NOT NULL,
     EmotionId       NVARCHAR(32) NOT NULL,
     IntensityLevel  TINYINT NOT NULL,
     CONSTRAINT FK_EmotionProfileComponents_Profiles FOREIGN KEY (ProfileId) REFERENCES dbo.EmotionProfiles (Id) ON DELETE CASCADE,
     CONSTRAINT FK_EmotionProfileComponents_BaseEmotions FOREIGN KEY (EmotionId) REFERENCES dbo.BaseEmotions (EmotionId),
     CONSTRAINT CK_EmotionProfileComponents_IntensityLevel CHECK (IntensityLevel BETWEEN 0 AND 2)
 );
+
+ALTER TABLE dbo.EmotionProfiles
+ADD CONSTRAINT FK_EmotionProfiles_EmotionMoments
+FOREIGN KEY (MomentId) REFERENCES dbo.EmotionMoments (Id) ON DELETE CASCADE;
 GO
 
 INSERT INTO dbo.BaseEmotions (EmotionId, Label, WheelOrder) VALUES
