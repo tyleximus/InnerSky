@@ -117,66 +117,71 @@
 
 @if (SelectedMoment is not null)
 {
-    <div class="moment-drawer-backdrop" @onclick="CloseMoment"></div>
-    <aside class="moment-drawer shadow-lg" role="dialog" aria-modal="true" @onclick:stopPropagation>
-        <header class="d-flex justify-content-between align-items-start gap-3 mb-4">
-            <div>
-                <p class="text-primary fw-semibold mb-1">Moment details</p>
-                <h2 class="h3 fw-semibold mb-0">@SelectedMoment.Title</h2>
-            </div>
-            <button class="btn-close" type="button" aria-label="Close" @onclick="CloseMoment"></button>
-        </header>
-
-        <section class="card border-0 bg-light mb-4">
-            <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold" for="editTitle">Title <span class="text-danger">*</span></label>
-                    <input id="editTitle" class="form-control" @bind="EditTitle" />
+    <div class="moment-drawer-layer">
+        <div class="moment-drawer-backdrop" @onclick="CloseMoment"></div>
+        <aside class="moment-drawer shadow-lg" role="dialog" aria-modal="true" aria-labelledby="momentDetailsTitle" @onclick:stopPropagation>
+            <header class="d-flex justify-content-between align-items-start gap-3 mb-4">
+                <div>
+                    <p class="text-primary fw-semibold mb-1">Moment details</p>
+                    <h2 id="momentDetailsTitle" class="h3 fw-semibold mb-0">@SelectedMoment.Title</h2>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold" for="editComment">Comment</label>
-                    <textarea id="editComment" class="form-control" rows="4" @bind="EditComment"></textarea>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold" for="editMomentDate">Date &amp; time <span class="text-danger">*</span></label>
-                    <input id="editMomentDate" class="form-control" type="datetime-local" @bind="EditMomentLocal" />
-                    <div class="form-text">Required and saved at minute precision.</div>
-                </div>
-                <button class="btn btn-primary" type="button" @onclick="SaveMoment" disabled="@IsSavingMoment">Save moment</button>
-            </div>
-        </section>
+                <button class="btn-close" type="button" aria-label="Close" @onclick="CloseMoment"></button>
+            </header>
 
-        <section>
-            <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
-                <h3 class="h5 fw-semibold mb-0">Emotion blends</h3>
-                <span class="text-secondary small">Drag rows to reorder</span>
-            </div>
+            <section class="card border-0 bg-light mb-4">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="editTitle">Title <span class="text-danger">*</span></label>
+                        <input id="editTitle" class="form-control" @bind="EditTitle" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="editComment">Comment</label>
+                        <textarea id="editComment" class="form-control" rows="4" @bind="EditComment"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="editMomentDate">Date &amp; time <span class="text-danger">*</span></label>
+                        <input id="editMomentDate" class="form-control" type="datetime-local" @bind="EditMomentLocal" />
+                        <div class="form-text">Required and saved at minute precision.</div>
+                    </div>
+                    <button class="btn btn-primary" type="button" @onclick="SaveMoment" disabled="@IsSavingMoment">Save moment</button>
+                </div>
+            </section>
 
-            <div class="d-flex flex-column gap-2">
-                @foreach (var blend in SelectedBlends)
-                {
-                    <article class="border rounded-4 p-3 bg-white"
-                             draggable="true"
-                             @ondragstart="() => DraggedBlendId = blend.Id"
-                             @ondragover:preventDefault
-                             @ondrop="() => DropBlend(blend.Id)">
-                        <div class="d-flex justify-content-between align-items-start gap-3">
-                            <div>
-                                <strong>☰ @blend.Name</strong>
-                                <div class="d-flex flex-wrap gap-2 mt-2">
-                                    @foreach (var component in blend.Components)
-                                    {
-                                        <span class="badge rounded-pill text-bg-light border">@FormatEmotion(component)</span>
-                                    }
+            <section>
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                    <h3 class="h5 fw-semibold mb-0">Emotion blends</h3>
+                    <span class="text-secondary small">Drag rows to reorder</span>
+                </div>
+
+                <div class="d-flex flex-column gap-2">
+                    @foreach (var blend in SelectedBlends)
+                    {
+                        <article class="moment-blend-row border rounded-4 p-3 bg-white @(DraggedBlendId == blend.Id ? "is-dragging" : null)"
+                                 draggable="true"
+                                 @ondragstart="() => StartDraggingBlend(blend.Id)"
+                                 @ondragend="ClearDraggedBlend"
+                                 @ondragenter:preventDefault
+                                 @ondragover:preventDefault
+                                 @ondrop:preventDefault
+                                 @ondrop="() => DropBlend(blend.Id)">
+                            <div class="d-flex justify-content-between align-items-start gap-3">
+                                <div>
+                                    <strong><span class="moment-blend-row__handle" aria-hidden="true">☰</span> @blend.Name</strong>
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        @foreach (var component in blend.Components)
+                                        {
+                                            <span class="badge rounded-pill text-bg-light border">@FormatEmotion(component)</span>
+                                        }
+                                    </div>
                                 </div>
+                                <button class="btn btn-sm btn-outline-danger" type="button" @onclick="() => RemoveBlend(blend.Id)">Remove</button>
                             </div>
-                            <button class="btn btn-sm btn-outline-danger" type="button" @onclick="() => RemoveBlend(blend.Id)">Remove</button>
-                        </div>
-                    </article>
-                }
-            </div>
-        </section>
-    </aside>
+                        </article>
+                    }
+                </div>
+            </section>
+        </aside>
+    </div>
 }
 
 @code {
@@ -303,6 +308,10 @@
             IsSavingMoment = false;
         }
     }
+
+    private void StartDraggingBlend(int blendId) => DraggedBlendId = blendId;
+
+    private void ClearDraggedBlend() => DraggedBlendId = null;
 
     private async Task DropBlend(int targetBlendId)
     {

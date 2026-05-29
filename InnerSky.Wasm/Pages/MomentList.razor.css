@@ -16,23 +16,49 @@
     box-shadow: 0 0.75rem 1.75rem rgba(15, 23, 42, 0.12) !important;
 }
 
-.moment-drawer-backdrop {
+.moment-drawer-layer {
     position: fixed;
     inset: 0;
+    isolation: isolate;
+    z-index: 2000;
+}
+
+.moment-drawer-backdrop {
+    position: absolute;
+    inset: 0;
     background: rgba(15, 23, 42, 0.45);
-    z-index: 1040;
+    backdrop-filter: blur(2px);
 }
 
 .moment-drawer {
-    position: fixed;
+    position: absolute;
     top: 0;
     right: 0;
     bottom: 0;
     width: min(100%, 720px);
-    z-index: 1050;
     background: #fff;
     overflow-y: auto;
     padding: 1.5rem;
+}
+
+.moment-blend-row {
+    cursor: grab;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+
+.moment-blend-row:hover,
+.moment-blend-row:focus-within {
+    border-color: var(--bs-primary) !important;
+    box-shadow: 0 0.5rem 1.25rem rgba(37, 99, 235, 0.12);
+}
+
+.moment-blend-row.is-dragging {
+    cursor: grabbing;
+    opacity: 0.55;
+}
+
+.moment-blend-row__handle {
+    color: var(--bs-secondary-color);
 }
 
 @media (min-width: 768px) {
